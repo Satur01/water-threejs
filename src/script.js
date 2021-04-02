@@ -2,14 +2,16 @@ import './style.css'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import * as dat from 'dat.gui';
-import BeginVertex from './shaders/begin_vertex.glsl';
+import ProjectVertex from './shaders/project_vertex.glsl';
 import Common from './shaders/common.glsl';
-import BeginNormal from './shaders/beginnormal_vertex.glsl';
-
 
 // Debug
 const gui = new dat.GUI();
-const debugObject = {};
+const debugObject = {
+    sphere: {
+        color: 0x69ff
+    }
+};
 
 // Canvas
 const canvas = document.querySelector('canvas.webgl')
@@ -27,36 +29,42 @@ const sizes = {
  const textureLoader = new THREE.TextureLoader();
 
  // Textures
-// const mapTexture = textureLoader.load('/models/LeePerrySmith/color.jpg')
-// mapTexture.encoding = THREE.sRGBEncoding
-// const normalTexture = textureLoader.load('/models/LeePerrySmith/normal.jpg');
+const normalTexture = textureLoader.load('/textures/normal.jpg');
 
 //Materials
 const customUniforms = {
     uTime: { value: 0 }
 }
 
-// const material = new THREE.MeshStandardMaterial( {
-//     map: mapTexture,
-//     normalMap: normalTexture
-// });
+const material = new THREE.MeshStandardMaterial(
+    { 
+        color: new THREE.Color(debugObject.sphere.color),
+        roughness: 0.7,
+        metalness: 0.2,
+        normalMap: normalTexture
+    }
+);
 
-// material.onBeforeCompile = ( shader ) => 
-// {
-//     shader.vertexShader = shader.vertexShader.replace('#include <common>', Common);    
-//     shader.uniforms.uTime = customUniforms.uTime;
-//     shader.vertexShader = shader.vertexShader.replace('#include <beginnormal_vertex>', BeginNormal);
-//     shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', BeginVertex); 
-//     console.log(shader);
-// }
+material.onBeforeCompile = ( shader ) => 
+{
+    shader.vertexShader = shader.vertexShader.replace('#include <common>', Common);    
+    shader.uniforms.uTime = customUniforms.uTime;
+    // shader.vertexShader = shader.vertexShader.replace('#include <project_vertex>', ProjectVertex); 
+    console.log(shader);
+}
 
 // Sphere
-const sphere = new THREE.Mesh( new THREE.SphereGeometry(1, 32, 32),  new THREE.MeshStandardMaterial( { color: 0xffff00, wireframe:true } ) );
+const geometry = new THREE.SphereBufferGeometry(0.5, 64, 64);
+const sphere = new THREE.Mesh( geometry,  material );
 scene.add(sphere);
 
 //Lights
-const ambientLight = new THREE.AmbientLight(0xffffff, 1);
-scene.add(ambientLight);
+const pointLight = new THREE.PointLight(0xffffff, 2)
+pointLight.position.x = 2
+pointLight.position.y = 3
+pointLight.position.z = 4
+scene.add(pointLight)
+
 
 // Camera
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
@@ -80,7 +88,11 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 const clock = new THREE.Clock();
 
 const tick = () => {
-    const elapsedTime = clock.getElapsedTime()
+    const elapsedTime = clock.getElapsedTime()    
+
+    // customUniforms.uTime.value = elapsedTime;
+
+    sphere.rotation.x = elapsedTime * 0.1;
 
     // Update controls
     controls.update()
@@ -100,8 +112,6 @@ window.addEventListener('resize', () => {
     sizes.width = window.innerWidth
     sizes.height = window.innerHeight
 
-    customUniforms.uTime.value = elapsedTime;
-
     // Update camera
     camera.aspect = sizes.width / sizes.height
     camera.updateProjectionMatrix()
@@ -110,3 +120,9 @@ window.addEventListener('resize', () => {
     renderer.setSize(sizes.width, sizes.height)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 })
+
+gui.add(sphere.material, 'roughness').name('Roughness').min(0).max(1).step(0.01);
+gui.add(sphere.material, 'metalness').name('Metalness').min(0).max(1).step(0.01);
+gui.addColor(debugObject.sphere, 'color').onChange((e)=>{
+    sphere.material.color.set(debugObject.sphere.color);
+});

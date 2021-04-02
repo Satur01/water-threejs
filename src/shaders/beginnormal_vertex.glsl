@@ -1,1 +1,0 @@
-#include <beginnormal_vertex>
